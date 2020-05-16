@@ -15,6 +15,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Net;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using DatingApp.API.Helpers;
 
 namespace DatingApp.API
 {
@@ -37,6 +41,7 @@ namespace DatingApp.API
             //Microsoft.EntityframeworkCore.design
             services.AddDbContext<DataContext>(option => 
             option.UseSqlServer(Configuration.GetConnectionString("DevConnection"))) ;
+            
             services.AddControllers();
             services.AddCors();  
 
@@ -64,8 +69,23 @@ namespace DatingApp.API
             {
                 app.UseDeveloperExceptionPage();
             }
+            else
+            {
+                app.UseExceptionHandler(builder => {
+                    builder.Run(async context => {
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            // app.UseHttpsRedirection();
+                        var error = context.Features.Get<IExceptionHandlerFeature>();
+                        if(error!=null)
+                        {
+                            context.Response.AddApplicationError(error.Error.Message);
+                            await context.Response.WriteAsync(error.Error.Message);
+                        }
+                    });
+                });
+            }
+
+            app.UseHttpsRedirection();
 
             app.UseRouting();
             
